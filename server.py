@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_session import Session
 from config import DevelopmentConfig
@@ -14,7 +14,7 @@ def create_app(config_class=DevelopmentConfig):
 
     db.init_app(app_1)
     Session(app_1)
-    CORS(app_1, supports_credentials=True, origins=[app_1.config['FRONTEND_URL']])
+    CORS(app_1, supports_credentials=True, origins="*")
 
     app_1.prediction_service = PredictionService(model_path='./models/fine_tuned_model_weights(1).pth', db=db)
     app_1.auth_service = AuthService(db=db)
@@ -22,10 +22,13 @@ def create_app(config_class=DevelopmentConfig):
     app_1.register_blueprint(auth_blueprint, url_prefix='/auth')
     app_1.register_blueprint(prediction_blueprint, url_prefix='/predictions')
 
-    return app_1
+    @app_1.route('/')
+    def index():
+    	return jsonify({'message': 'API is running!'}), 200
 
+    return app_1
 if __name__ == "__main__":
     app = create_app()
-    app.run(port=5000)
+    app.run(host="0.0.0.0",port=8000)
 
 
