@@ -3,9 +3,9 @@ import torch
 from PIL import Image
 from sqlalchemy import text
 from torchvision import transforms
-
 from config import Config
 from models.model_initializer import ModelInitializer
+from flask import current_app
 
 
 class PredictionService:
@@ -17,27 +17,26 @@ class PredictionService:
 
     def load_model(self):
         try:
-            print(f"Loading PyTorch model from {self.model_path}...")
-            # Initialize the model architecture
+            print(f"Loading PyTorch model from {self.model_path}...")  # Using standard print or logging
             model_initializer = ModelInitializer(self.device, model_name='ResNet50', weights_suffix='DEFAULT')
             model = model_initializer.initialize_model()
-
-            # Load the model weights (state_dict)
             model.load_state_dict(torch.load(self.model_path, map_location=self.device))
-
-            model.eval()  # Set the model to evaluation mode
+            model.eval()
             print("Model loaded successfully.")
             return model
         except Exception as e:
-            print(f"Error loading PyTorch model: {e}")
+            print(f"Error loading PyTorch model: {e}")  # Handle error logging without current_app context
             raise e
 
     def preprocess_image(self, image_path):
         if not os.path.exists(image_path):
-            print(f"Image path {image_path} does not exist.")
+            with current_app.app_context():
+                current_app.logger.error(f"Image path {image_path} does not exist.")
             return None
 
-        print(f"Loading and preprocessing image from {image_path}...")
+        with current_app.app_context():
+            current_app.logger.info(f"Loading and preprocessing image from {image_path}...")
+
         preprocess = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
@@ -60,7 +59,6 @@ class PredictionService:
             predictions = self.model(img_tensor)
 
         prediction_value = predictions.item()
-
         predicted_class = "Healthy" if prediction_value < 0.5 else "Infected"
         confidence = 1 - prediction_value if prediction_value < 0.5 else prediction_value
 
@@ -82,7 +80,8 @@ class PredictionService:
             return result.fetchone()[0]
         except Exception as e:
             db_session.rollback()
-            print(f"Error saving prediction: {e}")
+            with current_app.app_context():
+                current_app.logger.error(f"Error saving prediction: {e}")
             raise e
         finally:
             db_session.close()
@@ -91,11 +90,11 @@ class PredictionService:
         db_session = self.db.session
         try:
             total_query = text('SELECT COUNT(*) FROM predictions WHERE user_id = :user_id')
-            total_result = db_session.execute(total_query, {'user_id': user_id})
-            total_count = total_result.scalar()
+            total_count = db_session.execute(total_query, {'user_id': user_id}).scalar()
 
             query = text(
-                'SELECT * FROM predictions WHERE user_id = :user_id ORDER BY id DESC LIMIT :limit OFFSET :offset')
+                'SELECT * FROM predictions WHERE user_id = :user_id ORDER BY id DESC LIMIT :limit OFFSET :offset'
+            )
             result = db_session.execute(query, {'user_id': user_id, 'limit': limit, 'offset': offset})
 
             predictions = []

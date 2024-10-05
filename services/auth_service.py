@@ -1,3 +1,4 @@
+from flask import session, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import text
 
@@ -8,35 +9,32 @@ class AuthService:
     def register_user(self, email, password):
         db_session = self.db.session
 
-        # Ensure email and password are provided
-        if not email or not password:
-            raise ValueError("Email and password cannot be empty")
-
         try:
-            # Check if the user already exists
             query = text('SELECT * FROM users WHERE email = :email')
-            result = db_session.execute(query, {'email': email})
-            existing_user = result.fetchone()
+            existing_user = db_session.execute(query, {'email': email}).fetchone()
 
             if existing_user:
                 raise ValueError("User with this email already exists")
 
-            # Hash the password and insert the new user
             hashed_password = generate_password_hash(password)
             query = text('INSERT INTO users (email, password) VALUES (:email, :password) RETURNING id')
             result = db_session.execute(query, {
                 'email': email,
                 'password': hashed_password
             })
+
             user_id = result.fetchone()[0]
             db_session.commit()
             return {'user_id': user_id}
         except ValueError as ve:
             db_session.rollback()
-            raise ve  # Raise meaningful errors for empty fields or duplicate users
+            with current_app.app_context():
+                current_app.logger.warning(f"User registration error: {ve}")
+            raise ve
         except Exception as e:
             db_session.rollback()
-            print(f"Error registering user: {e}")
+            with current_app.app_context():
+                current_app.logger.error(f"Unexpected error during user registration: {e}")
             raise e
         finally:
             db_session.close()
@@ -45,8 +43,7 @@ class AuthService:
         db_session = self.db.session
         try:
             query = text('SELECT * FROM users WHERE email = :email')
-            result = db_session.execute(query, {'email': email})
-            user = result.fetchone()
+            user = db_session.execute(query, {'email': email}).fetchone()
 
             if not user:
                 return None, 'User not found'
@@ -56,32 +53,42 @@ class AuthService:
 
             return {'user_id': user[0]}, None
         except Exception as e:
-            print(f"Error logging in: {e}")
+            with current_app.app_context():
+                current_app.logger.error(f"Error logging in user {email}: {e}")
             raise e
         finally:
             db_session.close()
 
     def logout_user(self):
-        pass
-
-    def close(self):
-        self.db.session.close()
+        try:
+            session.clear()
+            self.db.session.commit()
+            return {'message': 'User successfully logged out'}
+        except Exception as e:
+            self.db.session.rollback()
+            with current_app.app_context():
+                current_app.logger.error(f"Error logging out user: {e}")
+            raise e
+        finally:
+            self.db.session.close()
 
     def get_user_by_id(self, user_id):
         db_session = self.db.session
         try:
             query = text('SELECT id, email FROM users WHERE id = :user_id')
             result = db_session.execute(query, {'user_id': user_id})
+            user = result.fetchone()
 
-            row = result.fetchone()
-
-            if row:
-                user = {
-                    'id': row[0],
-                    'email': row[1]
-                }
-                return user
+            if user:
+                return {'id': user[0], 'email': user[1]}
             else:
                 return None
+        except Exception as e:
+            with current_app.app_context():
+                current_app.logger.error(f"Error fetching user with ID {user_id}: {e}")
+            raise e
         finally:
             db_session.close()
+
+    def close(self):
+        self.db.session.close()

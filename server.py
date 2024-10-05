@@ -24,9 +24,10 @@ def create_app(config_class=DevelopmentConfig):
 
     @app_1.route('/')
     def index():
-    	return jsonify({'message': 'API is running!'}), 200
+        return jsonify({'message': 'API is running!'}), 200
 
     return app_1
+
 if __name__ == "__main__":
     app = create_app()
     app.run(host="0.0.0.0",port=8000)
