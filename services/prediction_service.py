@@ -6,7 +6,7 @@ from torchvision import transforms
 from config import Config
 from models.model_initializer import ModelInitializer
 from flask import current_app
-
+import base64
 
 class PredictionService:
     def __init__(self, model_path, db, device='cpu'):
@@ -17,7 +17,7 @@ class PredictionService:
 
     def load_model(self):
         try:
-            print(f"Loading PyTorch model from {self.model_path}...")  # Using standard print or logging
+            print(f"Loading PyTorch model from {self.model_path}...")
             model_initializer = ModelInitializer(self.device, model_name='ResNet50', weights_suffix='DEFAULT')
             model = model_initializer.initialize_model()
             model.load_state_dict(torch.load(self.model_path, map_location=self.device))
@@ -25,7 +25,7 @@ class PredictionService:
             print("Model loaded successfully.")
             return model
         except Exception as e:
-            print(f"Error loading PyTorch model: {e}")  # Handle error logging without current_app context
+            print(f"Error loading PyTorch model: {e}")
             raise e
 
     def preprocess_image(self, image_path):
@@ -59,7 +59,7 @@ class PredictionService:
             predictions = self.model(img_tensor)
 
         prediction_value = predictions.item()
-        predicted_class = "Healthy" if prediction_value < 0.5 else "Infected"
+        predicted_class = "Benign" if prediction_value < 0.5 else "Malignant"
         confidence = 1 - prediction_value if prediction_value < 0.5 else prediction_value
 
         return predicted_class, confidence
@@ -99,10 +99,13 @@ class PredictionService:
 
             predictions = []
             for row in result.fetchall():
+                image_path = os.path.join(Config.UPLOAD_FOLDER, row[2])
+                base64_image = self.convert_image_to_base64(image_path) if os.path.exists(image_path) else None
+
                 predictions.append({
                     'id': row[0],
                     'user_id': row[1],
-                    'image_src': row[2],
+                    'image_src': base64_image,
                     'title': row[3],
                     'confidence': str(row[4]),
                     'created_at': row[5].isoformat() if row[5] else None
@@ -111,3 +114,8 @@ class PredictionService:
             return predictions, total_count
         finally:
             db_session.close()
+
+    def convert_image_to_base64(self, image_path):
+        with open(image_path, "rb") as image_file:
+            base64_image = base64.b64encode(image_file.read()).decode("utf-8")
+            return f"data:image/jpeg;base64,{base64_image}"

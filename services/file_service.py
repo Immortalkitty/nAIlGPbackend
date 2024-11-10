@@ -1,6 +1,9 @@
 import os
 import time
 import uuid
+import base64
+from io import BytesIO
+from PIL import Image
 from flask import current_app
 
 class FileService:
@@ -34,6 +37,26 @@ class FileService:
         except Exception as e:
             with current_app.app_context():
                 current_app.logger.error(f"Error saving file: {e}")
+            raise e
+
+        return unique_filename
+
+    def save_base64_file(self, base64_image, extension=".jpg"):
+        unique_id = uuid.uuid4()
+        timestamp = int(time.time())
+        unique_filename = f"{unique_id}_{timestamp}{extension}"
+        filepath = os.path.join(self.upload_folder, unique_filename)
+
+
+        try:
+            image_data = base64.b64decode(base64_image)
+            image = Image.open(BytesIO(image_data)).convert('RGB')
+            image.save(filepath, format="JPEG")
+            with current_app.app_context():
+                current_app.logger.info(f"Base64 image saved successfully: {filepath}")
+        except Exception as e:
+            with current_app.app_context():
+                current_app.logger.error(f"Error saving base64 image: {e}")
             raise e
 
         return unique_filename

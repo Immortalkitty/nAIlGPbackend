@@ -27,7 +27,6 @@ def register():
     try:
         data = request.get_json()
 
-        # Decrypt the email and password before proceeding
         encrypted_email = data.get('email')
         encrypted_password = data.get('password')
 
@@ -56,7 +55,6 @@ def login():
     try:
         data = request.get_json()
 
-        # Decrypt the email and password before proceeding
         encrypted_email = data.get('email')
         encrypted_password = data.get('password')
 
