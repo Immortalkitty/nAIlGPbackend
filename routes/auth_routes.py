@@ -1,6 +1,6 @@
 from flask import Blueprint, request, session, jsonify, current_app
 
-from services.decrypt_utils import decrypt_message
+from services.decrypt_utils import DecryptUtils
 
 auth_blueprint = Blueprint('auth', __name__)
 
@@ -34,8 +34,8 @@ def register():
         if not encrypted_email or not encrypted_password:
             return jsonify({'error': 'Email and password are required'}), 400
 
-        email = decrypt_message(encrypted_email)
-        password = decrypt_message(encrypted_password)
+        email = DecryptUtils.decrypt_message(encrypted_email)
+        password = DecryptUtils.decrypt_message(encrypted_password)
 
         result = auth_service.register_user(email, password)
         session['user_id'] = result['user_id']
@@ -63,8 +63,8 @@ def login():
         if not encrypted_email or not encrypted_password:
             return jsonify({'error': 'Email and password are required'}), 400
 
-        email = decrypt_message(encrypted_email)
-        password = decrypt_message(encrypted_password)
+        email = DecryptUtils.decrypt_message(encrypted_email)
+        password = DecryptUtils.decrypt_message(encrypted_password)
 
         user, error = auth_service.login_user(email, password)
 
