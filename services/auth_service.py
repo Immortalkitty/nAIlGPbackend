@@ -6,20 +6,20 @@ class AuthService:
     def __init__(self, db):
         self.db = db
 
-    def register_user(self, email, password):
+    def register_user(self, username, password):
         db_session = self.db.session
 
         try:
-            query = text('SELECT * FROM users WHERE email = :email')
-            existing_user = db_session.execute(query, {'email': email}).fetchone()
+            query = text('SELECT * FROM users WHERE username = :username')
+            existing_user = db_session.execute(query, {'username': username}).fetchone()
 
             if existing_user:
-                raise ValueError("User with this email already exists")
+                raise ValueError("User with this username already exists")
 
             hashed_password = generate_password_hash(password)
-            query = text('INSERT INTO users (email, password) VALUES (:email, :password) RETURNING id')
+            query = text('INSERT INTO users (username, password) VALUES (:username, :password) RETURNING id')
             result = db_session.execute(query, {
-                'email': email,
+                'username': username,
                 'password': hashed_password
             })
 
@@ -39,11 +39,11 @@ class AuthService:
         finally:
             db_session.close()
 
-    def login_user(self, email, password):
+    def login_user(self, username, password):
         db_session = self.db.session
         try:
-            query = text('SELECT * FROM users WHERE email = :email')
-            user = db_session.execute(query, {'email': email}).fetchone()
+            query = text('SELECT * FROM users WHERE username = :username')
+            user = db_session.execute(query, {'username': username}).fetchone()
 
             if not user:
                 return None, 'User not found'
@@ -54,7 +54,7 @@ class AuthService:
             return {'user_id': user[0]}, None
         except Exception as e:
             with current_app.app_context():
-                current_app.logger.error(f"Error logging in user {email}: {e}")
+                current_app.logger.error(f"Error logging in user {username}: {e}")
             raise e
         finally:
             db_session.close()
@@ -75,12 +75,12 @@ class AuthService:
     def get_user_by_id(self, user_id):
         db_session = self.db.session
         try:
-            query = text('SELECT id, email FROM users WHERE id = :user_id')
+            query = text('SELECT id, username FROM users WHERE id = :user_id')
             result = db_session.execute(query, {'user_id': user_id})
             user = result.fetchone()
 
             if user:
-                return {'id': user[0], 'email': user[1]}
+                return {'id': user[0], 'username': user[1]}
             else:
                 return None
         except Exception as e:

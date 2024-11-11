@@ -2,7 +2,6 @@ import base64
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
 
-
 class DecryptUtils:
     def __init__(self):
         pass

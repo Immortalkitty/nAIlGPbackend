@@ -1,5 +1,4 @@
 from flask import Blueprint, request, session, jsonify, current_app
-
 from services.decrypt_utils import DecryptUtils
 
 auth_blueprint = Blueprint('auth', __name__)
@@ -16,7 +15,7 @@ def get_username():
     if 'user_id' in session:
         user_id = session['user_id']
         user = current_app.auth_service.get_user_by_id(user_id)
-        return jsonify({'username': user['email']}), 200
+        return jsonify({'username': user['username']}), 200
     return jsonify({'error': 'User not logged in'}), 401
 
 
@@ -27,17 +26,16 @@ def register():
     try:
         data = request.get_json()
 
-        # Decrypt the email and password before proceeding
-        encrypted_email = data.get('email')
+        encrypted_username = data.get('username')
         encrypted_password = data.get('password')
 
-        if not encrypted_email or not encrypted_password:
-            return jsonify({'error': 'Email and password are required'}), 400
+        if not encrypted_username or not encrypted_password:
+            return jsonify({'error': 'Username and password are required'}), 400
 
-        email = DecryptUtils.decrypt_message(encrypted_email)
+        username = DecryptUtils.decrypt_message(encrypted_username)
         password = DecryptUtils.decrypt_message(encrypted_password)
 
-        result = auth_service.register_user(email, password)
+        result = auth_service.register_user(username, password)
         session['user_id'] = result['user_id']
         return jsonify({'message': 'User registered', 'user_id': result['user_id']}), 201
     except ValueError as ve:
@@ -56,21 +54,20 @@ def login():
     try:
         data = request.get_json()
 
-        # Decrypt the email and password before proceeding
-        encrypted_email = data.get('email')
+        encrypted_username = data.get('username')
         encrypted_password = data.get('password')
 
-        if not encrypted_email or not encrypted_password:
-            return jsonify({'error': 'Email and password are required'}), 400
+        if not encrypted_username or not encrypted_password:
+            return jsonify({'error': 'Username and password are required'}), 400
 
-        email = DecryptUtils.decrypt_message(encrypted_email)
+        username = DecryptUtils.decrypt_message(encrypted_username)
         password = DecryptUtils.decrypt_message(encrypted_password)
 
-        user, error = auth_service.login_user(email, password)
+        user, error = auth_service.login_user(username, password)
 
         if error:
             with current_app.app_context():
-                current_app.logger.warning(f"Login failed for {email}: {error}")
+                current_app.logger.warning(f"Login failed for {username}: {error}")
             return jsonify({'error': error}), 400
 
         session['user_id'] = user['user_id']
