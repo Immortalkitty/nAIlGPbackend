@@ -18,7 +18,7 @@ class PredictionService:
     def load_model(self):
         try:
             print(f"Loading PyTorch model from {self.model_path}...")
-            model_initializer = ModelInitializer(self.device, model_name='ResNet50', weights_suffix='DEFAULT')
+            model_initializer = ModelInitializer(self.device, model_name='Inception_V3', weights_suffix='DEFAULT')
             model = model_initializer.initialize_model()
             model.load_state_dict(torch.load(self.model_path, map_location=self.device))
             model.eval()
@@ -38,12 +38,13 @@ class PredictionService:
             current_app.logger.info(f"Loading and preprocessing image from {image_path}...")
 
         preprocess = transforms.Compose([
-            transforms.Resize(299),
+            transforms.Resize(310),
+            transforms.CenterCrop(299),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
 
-        img = Image.open(image_path)
+        img = Image.open(image_path).convert('RGB')
         img_tensor = preprocess(img).unsqueeze(0)
         return img_tensor.to(self.device)
 
@@ -54,10 +55,14 @@ class PredictionService:
         if img_tensor is None:
             return "Error", 0.0
 
-        with torch.no_grad():
-            predictions = self.model(img_tensor)
+        img_tensor = img_tensor.to(self.device)
 
-        prediction_value = predictions.item()
+        with torch.no_grad():
+            outputs = self.model(img_tensor)
+            if isinstance(outputs, tuple):
+                outputs = outputs[0]
+            prediction_value = torch.sigmoid(outputs).item()
+
         predicted_class = "Healthy" if prediction_value < 0.5 else "Infected"
         confidence = 1 - prediction_value if prediction_value < 0.5 else prediction_value
 
