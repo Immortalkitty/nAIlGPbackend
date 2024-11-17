@@ -3,7 +3,7 @@ from torchvision import models
 
 
 class ModelInitializer:
-    def __init__(self, device, model_name='ResNet50', weights_suffix='DEFAULT'):
+    def __init__(self, device, model_name='EfficientNet_V2_S', weights_suffix='DEFAULT'): # weights_suffix='IMAGENET1K_V1'
         self.device = device
         self.model_name = model_name
         self.weights_suffix = weights_suffix
@@ -24,6 +24,7 @@ class ModelInitializer:
 
         model = model_class(weights=weights_class)
 
+
         if hasattr(model, 'fc'):
             num_features = model.fc.in_features
             model.fc = nn.Sequential(
@@ -33,8 +34,9 @@ class ModelInitializer:
         elif hasattr(model, 'classifier'):
             num_features = model.classifier[1].in_features
             model.classifier = nn.Sequential(
-                nn.Linear(num_features, 1),
-                nn.Sigmoid()
+                nn.Dropout(p=0.2, inplace=False),
+                nn.SELU(),
+                nn.Linear(num_features, 1)
             )
         else:
             raise ValueError(f"Model {self.model_name} architecture requires custom handling.")

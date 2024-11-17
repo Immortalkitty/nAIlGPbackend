@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="nail_tf" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="nail_tf" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.11 (nAIlGPbackend)" project-jdk-type="Python SDK" />
 </project>
