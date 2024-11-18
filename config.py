@@ -13,7 +13,7 @@ class Config:
     SESSION_TYPE = 'sqlalchemy'
     SESSION_SQLALCHEMY = db
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', './uploads')
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
     SESSION_PERMANENT = os.getenv('SESSION_PERMANENT', 'True').lower() == 'true'
     SESSION_USE_SIGNER = os.getenv('SESSION_USE_SIGNER', 'True').lower() == 'true'
     SESSION_SQLALCHEMY_TABLE = os.getenv('SESSION_SQLALCHEMY_TABLE', 'sessions')
