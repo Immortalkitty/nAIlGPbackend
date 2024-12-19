@@ -29,12 +29,13 @@ def predict():
             return jsonify({'error': 'Invalid image data'}), 400
 
         try:
-            predicted_class, confidence = prediction_service.predict(filepath)
+            predicted_class, confidence, text_detected = prediction_service.predict(filepath)
             user_id = session.get('user_id')
             prediction_id = prediction_service.save_prediction(user_id, filepath, predicted_class, confidence)
             with open(os.path.join(Config.UPLOAD_FOLDER, filepath), "rb") as image_file:
                 base64_encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
-                base64_image_data = f"data:image/jpeg;base64,{base64_encoded_image}"
+                base64_image_data = f"data:image/jpeg;base64,{base64_encoded_image}" ##tu
+
 
             return jsonify({
                 'title': predicted_class,
@@ -42,7 +43,8 @@ def predict():
                 'image_src': base64_image_data,
                 'filename': filepath,
                 'message': 'Prediction saved successfully',
-                'prediction_id': prediction_id
+                'prediction_id': prediction_id,
+                'text_detected': text_detected
             }), 200
         except Exception as e:
             current_app.logger.error(f"Error during prediction: {e}")

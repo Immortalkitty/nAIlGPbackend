@@ -7,6 +7,7 @@ from config import Config
 from models.model_initializer import ModelInitializer
 from flask import current_app
 import base64
+import pytesseract
 
 class PredictionService:
     def __init__(self, model_path, db, device='cpu'):
@@ -81,6 +82,7 @@ class PredictionService:
     def predict(self, image_path):
         image_path = os.path.join(Config.UPLOAD_FOLDER, image_path)
         img_tensor = self.preprocess_image(image_path)
+        text_detected = self.check_for_text(image_path)
 
         if img_tensor is None:
             return "Error", 0.0
@@ -94,7 +96,7 @@ class PredictionService:
         predicted_class = "no cancer" if prediction_value < 0.5 else "cancer"
         confidence = 1 - prediction_value if prediction_value < 0.5 else prediction_value
 
-        return predicted_class, confidence
+        return predicted_class, confidence, text_detected
 
     def save_prediction(self, user_id, filepath, title, confidence):
         db_session = self.db.session
@@ -151,3 +153,12 @@ class PredictionService:
         with open(image_path, "rb") as image_file:
             base64_image = base64.b64encode(image_file.read()).decode("utf-8")
             return f"data:image/jpeg;base64,{base64_image}"
+
+    def check_for_text(self, image_path):
+        image = Image.open(image_path)
+        image_text = pytesseract.image_to_string(image)
+
+        if image_text.strip():
+            return True  # Text found
+        else:
+            return False  # No text found
